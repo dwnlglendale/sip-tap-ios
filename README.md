@@ -1,4 +1,6 @@
-# Welcome to your Expo app 👋
+# SipTap - Your Personal Hydration Companion 👋
+
+Provide a smart, personalized, and engaging hydration experience that helps users build a lifelong habit of drinking water.
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
