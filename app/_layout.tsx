@@ -1,39 +1,62 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+import { Stack, Redirect, Slot, useRouter, useSegments } from "expo-router";
+import { colors } from "./theme/colors";
+import { useEffect, useState } from "react";
+import { View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  // Force hasCompletedOnboarding to false for testing
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const segments = useSegments();
+  const router = useRouter();
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+    // Comment out the actual check for testing
+    // checkOnboardingStatus();
+    setIsLoading(false);
+  }, []);
 
-  if (!loaded) {
-    return null;
+  useEffect(() => {
+    if (!isLoading) {
+      const inOnboarding = segments[0] === "onboarding";
+      
+      // Force navigation to onboarding for testing
+      if (!inOnboarding) {
+        router.replace("/onboarding");
+      }
+      
+      // Comment out the actual logic for testing
+      /*
+      if (!hasCompletedOnboarding && !inOnboarding) {
+        router.replace("/onboarding");
+      } else if (hasCompletedOnboarding && inOnboarding) {
+        router.replace("/");
+      }
+      */
+    }
+  }, [hasCompletedOnboarding, segments, isLoading]);
+
+  // Comment out the actual check function for testing
+  /*
+  const checkOnboardingStatus = async () => {
+    try {
+      const value = await AsyncStorage.getItem('hasCompletedOnboarding');
+      console.log('Onboarding status:', value);
+      setHasCompletedOnboarding(value === 'true');
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  */
+
+  console.log('Current hasCompletedOnboarding state:', hasCompletedOnboarding);
+
+  if (isLoading) {
+    return <View style={{ flex: 1, backgroundColor: colors.secondary.white }} />;
   }
 
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
-  );
+  return <Slot />;
 }
