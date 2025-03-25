@@ -20,25 +20,15 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isLoading) {
       const inOnboarding = segments[0] === "onboarding";
+      const inPersonalization = segments[0] === "(personalization)";
       
-      // Force navigation to onboarding for testing
-      if (!inOnboarding) {
+      // Only redirect to onboarding if we're not in onboarding or personalization
+      if (!hasCompletedOnboarding && !inOnboarding && !inPersonalization) {
         router.replace("/onboarding");
       }
-      
-      // Comment out the actual logic for testing
-      /*
-      if (!hasCompletedOnboarding && !inOnboarding) {
-        router.replace("/onboarding");
-      } else if (hasCompletedOnboarding && inOnboarding) {
-        router.replace("/");
-      }
-      */
     }
   }, [hasCompletedOnboarding, segments, isLoading]);
 
-  // Comment out the actual check function for testing
-  /*
   const checkOnboardingStatus = async () => {
     try {
       const value = await AsyncStorage.getItem('hasCompletedOnboarding');
@@ -50,9 +40,6 @@ export default function RootLayout() {
       setIsLoading(false);
     }
   };
-  */
-
-  console.log('Current hasCompletedOnboarding state:', hasCompletedOnboarding);
 
   if (isLoading) {
     return <View style={{ flex: 1, backgroundColor: colors.secondary.white }} />;

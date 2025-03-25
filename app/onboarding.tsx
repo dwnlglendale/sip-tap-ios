@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, useColorScheme } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, useColorScheme, Animated } from 'react-native';
 import { colors } from './theme/colors';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,18 +9,72 @@ const { width } = Dimensions.get('window');
 export default function Onboarding() {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
+  
+  // Animation values for each word
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const tapSlideAnim = useRef(new Animated.Value(100)).current;
+  const tapFadeAnim = useRef(new Animated.Value(0)).current;
+  const thriveSlideAnim = useRef(new Animated.Value(100)).current;
+  const thriveFadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // First word animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Second word animation with delay
+    Animated.sequence([
+      Animated.delay(400),
+      Animated.parallel([
+        Animated.timing(tapFadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(tapSlideAnim, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+
+    // Third word animation with delay
+    Animated.sequence([
+      Animated.delay(800),
+      Animated.parallel([
+        Animated.timing(thriveFadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(thriveSlideAnim, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, []);
 
   const handleGetStarted = async () => {
     try {
-      // Comment out saving for testing
-      /*
-      console.log('Saving onboarding status...');
-      await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
-      console.log('Onboarding status saved successfully');
-      */
-      router.replace('/');
+      console.log('Starting navigation to hydration goal...');
+      router.push('/(personalization)/hydration-goal');
+      console.log('Navigation command executed');
     } catch (error) {
-      console.error('Error saving onboarding status:', error);
+      console.error('Error during navigation:', error);
     }
   };
 
@@ -35,10 +89,32 @@ export default function Onboarding() {
             styles.title,
             { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
           ]}>Welcome to SipTap</Text>
-          <Text style={[
-            styles.subtitle,
-            { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }
-          ]}>Sip. Tap. Thrive</Text>
+          <View style={styles.subtitleContainer}>
+            <Animated.Text style={[
+              styles.subtitle,
+              { 
+                color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray,
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              }
+            ]}>Sip.</Animated.Text>
+            <Animated.Text style={[
+              styles.subtitle,
+              { 
+                color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray,
+                opacity: tapFadeAnim,
+                transform: [{ translateX: tapSlideAnim }],
+              }
+            ]}> Tap.</Animated.Text>
+            <Animated.Text style={[
+              styles.subtitle,
+              { 
+                color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray,
+                opacity: thriveFadeAnim,
+                transform: [{ translateX: thriveSlideAnim }],
+              }
+            ]}> Thrive.</Animated.Text>
+          </View>
         </View>
 
         <TouchableOpacity 
@@ -68,9 +144,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
   },
+  subtitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 40,
+  },
   subtitle: {
     fontSize: 35,
-    marginBottom: 40,
     textAlign: 'center',
   },
   features: {
