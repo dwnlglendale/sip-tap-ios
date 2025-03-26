@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Animated } from 'react-native';
 import { colors } from '../theme/colors';
 import { router } from 'expo-router';
 import { useColorScheme } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Types
 type ActivityLevel = 'sedentary' | 'active' | 'athlete';
@@ -11,6 +12,7 @@ interface ActivityOption {
   label: string;
   value: ActivityLevel;
   description: string;
+  icon: string; // MaterialCommunityIcons name
 }
 
 // Constants
@@ -19,16 +21,19 @@ const ACTIVITY_OPTIONS: ActivityOption[] = [
     label: 'Sedentary',
     value: 'sedentary',
     description: 'Little to no exercise, desk job',
+    icon: 'seat-outline',
   },
   {
     label: 'Active',
     value: 'active',
     description: 'Regular exercise, moderate activity',
+    icon: 'run',
   },
   {
     label: 'Athlete',
     value: 'athlete',
     description: 'Intensive training, high activity',
+    icon: 'dumbbell',
   },
 ];
 
@@ -40,6 +45,26 @@ export default function HydrationGoal() {
   const [weight, setWeight] = useState('');
   const [selectedActivity, setSelectedActivity] = useState<ActivityLevel | null>(null);
   const [dailyGoal, setDailyGoal] = useState<number | null>(null);
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    // Animate the entrance of the screen
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   // Calculate daily water goal (in ml)
   const calculateDailyGoal = () => {
@@ -83,107 +108,119 @@ export default function HydrationGoal() {
       ]}
       contentContainerStyle={styles.content}
     >
-      <View style={styles.section}>
-        <Text style={[
-          styles.title,
-          { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-        ]}>Set Your Hydration Goal</Text>
-        <Text style={[
-          styles.subtitle,
-          { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }
-        ]}>Let's personalize your daily water intake</Text>
-      </View>
+      <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        <View style={styles.section}>
+          <Text style={[
+            styles.title,
+            { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
+          ]}>Set Your Hydration Goal</Text>
+          <Text style={[
+            styles.subtitle,
+            { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }
+          ]}>Let's personalize your daily water intake</Text>
+        </View>
 
-      <View style={styles.inputSection}>
-        <Text style={[
-          styles.label,
-          { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }
-        ]}>Your Weight (kg)</Text>
-        <TextInput
-          style={[
-            styles.input,
-            { 
-              backgroundColor: isDarkMode ? colors.neutral.darkGray : colors.secondary.white,
-              color: isDarkMode ? colors.neutral.white : colors.neutral.black,
-              borderColor: isDarkMode ? colors.neutral.lightGray : colors.neutral.darkGray,
-            }
-          ]}
-          value={weight}
-          onChangeText={setWeight}
-          keyboardType="numeric"
-          placeholder="Enter your weight"
-          placeholderTextColor={isDarkMode ? colors.neutral.lightGray : colors.neutral.darkGray}
-        />
-      </View>
-
-      <View style={styles.activitySection}>
-        <Text style={[
-          styles.label,
-          { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }
-        ]}>Activity Level</Text>
-        {ACTIVITY_OPTIONS.map((option) => (
-          <TouchableOpacity
-            key={option.value}
+        <View style={styles.inputSection}>
+          <Text style={[
+            styles.label,
+            { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }
+          ]}>Your Weight (kg)</Text>
+          <TextInput
             style={[
-              styles.activityOption,
-              {
-                backgroundColor: selectedActivity === option.value 
-                  ? colors.accent.purple 
-                  : isDarkMode 
-                    ? colors.neutral.darkGray 
-                    : colors.secondary.white,
+              styles.input,
+              { 
+                backgroundColor: isDarkMode ? colors.neutral.darkGray : colors.secondary.white,
+                color: isDarkMode ? colors.neutral.white : colors.neutral.black,
                 borderColor: isDarkMode ? colors.neutral.lightGray : colors.neutral.darkGray,
               }
             ]}
-            onPress={() => setSelectedActivity(option.value)}
-          >
-            <Text style={[
-              styles.activityLabel,
-              { 
-                color: selectedActivity === option.value 
-                  ? colors.secondary.white 
-                  : isDarkMode 
-                    ? colors.neutral.white 
-                    : colors.neutral.black,
-              }
-            ]}>{option.label}</Text>
-            <Text style={[
-              styles.activityDescription,
-              { 
-                color: selectedActivity === option.value 
-                  ? colors.secondary.white 
-                  : isDarkMode 
-                    ? colors.neutral.lightGray 
-                    : colors.neutral.darkGray,
-              }
-            ]}>{option.description}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {dailyGoal && (
-        <View style={styles.goalSection}>
-          <Text style={[
-            styles.goalTitle,
-            { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-          ]}>Your Daily Goal</Text>
-          <Text style={[
-            styles.goalAmount,
-            { color: colors.primary.main }
-          ]}>{dailyGoal}ml</Text>
+            value={weight}
+            onChangeText={setWeight}
+            keyboardType="numeric"
+            placeholder="Enter your weight"
+            placeholderTextColor={isDarkMode ? colors.neutral.lightGray : colors.neutral.darkGray}
+          />
         </View>
-      )}
 
-      <TouchableOpacity
-        style={[
-          styles.button,
-          { opacity: (!weight || !selectedActivity) ? 0.5 : 1 }
-        ]}
-        onPress={handleNext}
-        disabled={!weight || !selectedActivity}
-      >
-        <Text style={styles.buttonText}>Next</Text>
-      </TouchableOpacity>
+        <View style={styles.activitySection}>
+          <Text style={[
+            styles.label,
+            { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }
+          ]}>Activity Level</Text>
+          {ACTIVITY_OPTIONS.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.activityOption,
+                {
+                  backgroundColor: selectedActivity === option.value 
+                    ? colors.accent.purple 
+                    : isDarkMode 
+                      ? colors.neutral.darkGray 
+                      : colors.secondary.white,
+                  borderColor: isDarkMode ? colors.neutral.lightGray : colors.neutral.darkGray,
+                }
+              ]}
+              onPress={() => setSelectedActivity(option.value)}
+            >
+              <View style={styles.optionContent}>
+                <MaterialCommunityIcons
+                  name={option.icon}
+                  size={24}
+                  color={selectedActivity === option.value ? colors.secondary.white : colors.accent.purple}
+                  style={styles.icon}
+                />
+                <View>
+                  <Text style={[
+                    styles.activityLabel,
+                    { 
+                      color: selectedActivity === option.value 
+                        ? colors.secondary.white 
+                        : isDarkMode 
+                          ? colors.neutral.white 
+                          : colors.neutral.black,
+                    }
+                  ]}>{option.label}</Text>
+                  <Text style={[
+                    styles.activityDescription,
+                    { 
+                      color: selectedActivity === option.value 
+                        ? colors.secondary.white 
+                        : isDarkMode 
+                          ? colors.neutral.lightGray 
+                          : colors.neutral.darkGray,
+                    }
+                  ]}>{option.description}</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {dailyGoal && (
+          <View style={styles.goalSection}>
+            <Text style={[
+              styles.goalTitle,
+              { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
+            ]}>Your Daily Goal</Text>
+            <Text style={[
+              styles.goalAmount,
+              { color: colors.primary.main }
+            ]}>{dailyGoal}ml</Text>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[
+            styles.button,
+            { opacity: (!weight || !selectedActivity) ? 0.5 : 1 }
+          ]}
+          onPress={handleNext}
+          disabled={!weight || !selectedActivity}
+        >
+          <Text style={styles.buttonText}>Next</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -229,6 +266,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
     borderWidth: 1,
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  icon: {
+    marginRight: 12,
   },
   activityLabel: {
     fontSize: 16,

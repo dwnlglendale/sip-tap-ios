@@ -77,7 +77,7 @@ export default function Gamification() {
   }, []);
 
   const handleContinue = () => {
-    router.replace('/');
+    router.push('/(personalization)/eco-friendly');
   };
 
   return (
