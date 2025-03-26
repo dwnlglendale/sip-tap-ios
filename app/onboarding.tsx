@@ -68,14 +68,11 @@ export default function Onboarding() {
     ]).start();
   }, []);
 
-  const handleGetStarted = async () => {
-    try {
-      console.log('Starting navigation to hydration goal...');
-      router.push('/(personalization)/hydration-goal');
-      console.log('Navigation command executed');
-    } catch (error) {
-      console.error('Error during navigation:', error);
-    }
+  const handleGetStarted = () => {
+    // Save onboarding completion status
+    AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+    // Navigate to username screen
+    router.push('/(personalization)/username');
   };
 
   return (

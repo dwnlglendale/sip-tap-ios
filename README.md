@@ -1,52 +1,140 @@
-# SipTap - Your Personal Hydration Companion 👋
+# SipTap - Your Personal Hydration Companion
 
-Provide a smart, personalized, and engaging hydration experience that helps users build a lifelong habit of drinking water.
+A modern, user-friendly hydration tracking app built with Expo and React Native.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Features
 
-## Get started
+### Onboarding Flow
+- **Welcome Screen**
+  - Beautiful animated welcome screen
+  - "Get Started" button to begin personalization
+  - Smooth transitions and animations
 
-1. Install dependencies
+### Personalization Flow
+1. **Username Setup**
+   - Collect user's name for personalized experience
+   - Input validation and error handling
+   - Dark mode support
 
+2. **Hydration Goal Setup**
+   - Weight input for personalized calculations
+   - Activity level selection (Sedentary, Active, Athlete)
+   - Dynamic daily water goal calculation
+   - Real-time goal updates
+
+3. **Preferences**
+   - Reminder settings
+   - Notification preferences
+   - Customizable tracking options
+
+4. **Gamification**
+   - Streak tracking system
+   - Achievement system
+   - Progress visualization
+
+5. **Eco-Friendly Options**
+   - Bottle saving tracking
+   - Environmental impact visualization
+   - Sustainability tips
+
+6. **Dashboard Introduction**
+   - Feature overview
+   - Quick start guide
+   - Animated transitions
+
+### Main App Features
+- **Home Screen**
+  - Personalized greeting with user's name
+  - Daily progress tracking
+  - Quick-add water intake buttons
+  - Streak counter
+  - Environmental impact stats
+  - Weather-based hydration reminders
+
+- **Progress Tracking**
+  - Daily water intake monitoring
+  - Goal progress visualization
+  - Streak system
+  - Achievement tracking
+
+- **Quick Actions**
+  - One-tap water logging
+  - Custom amount input
+  - Quick-add presets (250ml, 500ml, 750ml)
+
+## Technical Implementation
+
+### Navigation Structure
+```
+app/
+├── (app)/
+│   ├── home.tsx
+│   └── _layout.tsx
+├── (personalization)/
+│   ├── username.tsx
+│   ├── hydration-goal.tsx
+│   ├── preferences.tsx
+│   ├── gamification.tsx
+│   ├── eco-friendly.tsx
+│   ├── dashboard-intro.tsx
+│   └── _layout.tsx
+├── onboarding.tsx
+└── _layout.tsx
+```
+
+### State Management
+- PersonalizationContext for managing user preferences
+- AsyncStorage for persisting user data
+- Local state management for UI components
+
+### Testing Features
+- Easy onboarding reset for testing
+- Toggle `FORCE_ONBOARDING` in `_layout.tsx`:
+  ```typescript
+  const FORCE_ONBOARDING = true; // Set to true to force onboarding
+  ```
+
+## Development Notes
+
+### Navigation Flow
+1. Onboarding → Username → Hydration Goal → Preferences → Gamification → Eco-Friendly → Dashboard Intro → Main App
+
+### Data Persistence
+- User preferences stored in AsyncStorage
+- Daily progress tracking
+- Streak and achievement data
+
+### UI/UX Features
+- Dark mode support
+- Responsive design
+- Smooth animations
+- Intuitive navigation
+- Progress visualization
+
+## Getting Started
+
+1. Clone the repository
+2. Install dependencies:
    ```bash
    npm install
    ```
-
-2. Start the app
-
+3. Start the development server:
    ```bash
-    npx expo start
+   npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+## Testing
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+To test the onboarding flow:
+1. Set `FORCE_ONBOARDING = true` in `app/_layout.tsx`
+2. Restart the app
+3. Complete the onboarding process
+4. Set `FORCE_ONBOARDING = false` to test with saved preferences
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Next Steps
+- Implement custom water intake input
+- Add detailed statistics and analytics
+- Enhance gamification features
+- Add social features
+- Implement push notifications
+- Add offline support

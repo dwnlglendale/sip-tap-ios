@@ -4,6 +4,7 @@ import { colors } from '../theme/colors';
 import { router } from 'expo-router';
 import { useColorScheme } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { usePersonalization } from '../contexts/PersonalizationContext';
 
 interface EcoOption {
   id: string;
@@ -38,6 +39,7 @@ const ECO_OPTIONS: EcoOption[] = [
 ];
 
 export default function EcoFriendly() {
+  const { data, updateData } = usePersonalization();
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
   
@@ -75,8 +77,21 @@ export default function EcoFriendly() {
     }).start();
   }, []);
 
+  const handleOptionSelect = (id: string) => {
+    console.log('Option selected:', id);
+    setSelectedOption(id);
+  };
+
   const handleNext = () => {
-    router.push('/(personalization)/dashboard-intro');
+    console.log('handleNext called');
+    console.log('Selected option:', selectedOption);
+    try {
+      console.log('Attempting to navigate to dashboard-intro...');
+      router.push('/(personalization)/dashboard-intro');
+      console.log('Navigation command executed');
+    } catch (error) {
+      console.error('Navigation error:', error);
+    }
   };
 
   return (
@@ -141,7 +156,7 @@ export default function EcoFriendly() {
                   borderColor: isDarkMode ? colors.neutral.lightGray : colors.neutral.darkGray,
                 }
               ]}
-              onPress={() => setSelectedOption(option.id)}
+              onPress={() => handleOptionSelect(option.id)}
             >
               <View style={styles.optionHeader}>
                 <MaterialCommunityIcons

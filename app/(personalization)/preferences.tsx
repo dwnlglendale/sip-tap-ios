@@ -4,6 +4,7 @@ import { colors } from '../theme/colors';
 import { router } from 'expo-router';
 import { useColorScheme } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { usePersonalization } from '../contexts/PersonalizationContext';
 
 // Types
 type ReminderMode = 'smart' | 'manual';
@@ -32,10 +33,11 @@ const REMINDER_OPTIONS: ReminderOption[] = [
 ];
 
 export default function Preferences() {
+  const { data, updateData } = usePersonalization();
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
   
-  const [selectedMode, setSelectedMode] = useState<ReminderMode | null>(null);
+  const [selectedMode, setSelectedMode] = useState<ReminderMode | null>(data.reminderMode);
   
   // Animation values for each option
   const scaleAnims = useRef(REMINDER_OPTIONS.map(() => new Animated.Value(1))).current;
@@ -71,6 +73,7 @@ export default function Preferences() {
     ]).start();
 
     setSelectedMode(value);
+    updateData({ reminderMode: value });
   };
 
   const handleNext = () => {

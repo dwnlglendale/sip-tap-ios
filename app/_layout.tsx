@@ -3,27 +3,32 @@ import { colors } from "./theme/colors";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { PersonalizationProvider } from './contexts/PersonalizationContext';
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
-  // Force hasCompletedOnboarding to false for testing
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  // TESTING FLAG: Set to true to force onboarding, false to use actual status
+  const FORCE_ONBOARDING = true;
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(!FORCE_ONBOARDING);
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    // Comment out the actual check for testing
-    // checkOnboardingStatus();
-    setIsLoading(false);
+    if (!FORCE_ONBOARDING) {
+      checkOnboardingStatus();
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     if (!isLoading) {
       const inOnboarding = segments[0] === "onboarding";
       const inPersonalization = segments[0] === "(personalization)";
+      const inApp = segments[0] === "(app)";
       
-      // Only redirect to onboarding if we're not in onboarding or personalization
-      if (!hasCompletedOnboarding && !inOnboarding && !inPersonalization) {
+      // Only redirect to onboarding if we're not in onboarding, personalization, or app
+      if (!hasCompletedOnboarding && !inOnboarding && !inPersonalization && !inApp) {
         router.replace("/onboarding");
       }
     }
@@ -45,5 +50,9 @@ export default function RootLayout() {
     return <View style={{ flex: 1, backgroundColor: colors.secondary.white }} />;
   }
 
-  return <Slot />;
+  return (
+    <PersonalizationProvider>
+      <Slot />
+    </PersonalizationProvider>
+  );
 }

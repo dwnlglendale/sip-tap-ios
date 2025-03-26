@@ -4,6 +4,7 @@ import { colors } from '../theme/colors';
 import { router } from 'expo-router';
 import { useColorScheme } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { usePersonalization } from '../contexts/PersonalizationContext';
 
 // Types
 type ActivityLevel = 'sedentary' | 'active' | 'athlete';
@@ -38,13 +39,14 @@ const ACTIVITY_OPTIONS: ActivityOption[] = [
 ];
 
 export default function HydrationGoal() {
+  const { data, updateData } = usePersonalization();
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
   
-  // State
-  const [weight, setWeight] = useState('');
-  const [selectedActivity, setSelectedActivity] = useState<ActivityLevel | null>(null);
-  const [dailyGoal, setDailyGoal] = useState<number | null>(null);
+  // Use context data instead of local state
+  const [weight, setWeight] = useState(data.weight);
+  const [selectedActivity, setSelectedActivity] = useState(data.activityLevel);
+  const [dailyGoal, setDailyGoal] = useState(data.dailyGoal);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -65,6 +67,17 @@ export default function HydrationGoal() {
       }),
     ]).start();
   }, []);
+
+  // Update both local state and context
+  const handleWeightChange = (value: string) => {
+    setWeight(value);
+    updateData({ weight: value });
+  };
+
+  const handleActivitySelect = (value: ActivityLevel) => {
+    setSelectedActivity(value);
+    updateData({ activityLevel: value });
+  };
 
   // Calculate daily water goal (in ml)
   const calculateDailyGoal = () => {
@@ -93,6 +106,12 @@ export default function HydrationGoal() {
   useEffect(() => {
     calculateDailyGoal();
   }, [weight, selectedActivity]);
+
+  useEffect(() => {
+    if (dailyGoal) {
+      updateData({ dailyGoal });
+    }
+  }, [dailyGoal]);
 
   const handleNext = () => {
     // Here you would typically save the goal to your app's state management
@@ -135,7 +154,7 @@ export default function HydrationGoal() {
               }
             ]}
             value={weight}
-            onChangeText={setWeight}
+            onChangeText={handleWeightChange}
             keyboardType="numeric"
             placeholder="Enter your weight"
             placeholderTextColor={isDarkMode ? colors.neutral.lightGray : colors.neutral.darkGray}
@@ -161,7 +180,7 @@ export default function HydrationGoal() {
                   borderColor: isDarkMode ? colors.neutral.lightGray : colors.neutral.darkGray,
                 }
               ]}
-              onPress={() => setSelectedActivity(option.value)}
+              onPress={() => handleActivitySelect(option.value)}
             >
               <View style={styles.optionContent}>
                 <MaterialCommunityIcons

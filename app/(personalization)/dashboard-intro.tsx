@@ -4,6 +4,8 @@ import { colors } from '../theme/colors';
 import { router } from 'expo-router';
 import { useColorScheme } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { usePersonalization } from '../contexts/PersonalizationContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Feature {
   id: string;
@@ -36,6 +38,7 @@ const FEATURES: Feature[] = [
 export default function DashboardIntro() {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
+  const { data } = usePersonalization();
 
   // Animation values
   const fadeAnims = useRef(FEATURES.map(() => new Animated.Value(0))).current;
@@ -69,9 +72,21 @@ export default function DashboardIntro() {
     }).start();
   }, []);
 
-  const handleStart = () => {
-    // Save onboarding completion status and navigate to main app
-    router.replace('/');
+  const handleStart = async () => {
+    try {
+      console.log('Saving preferences and navigating to main app...');
+      // Save all personalization data to AsyncStorage
+      await AsyncStorage.setItem('userPreferences', JSON.stringify(data));
+      await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+      console.log('Preferences saved successfully');
+      
+      // Navigate to the main app
+      console.log('Navigating to home screen...');
+      router.replace('/(app)/home');
+      console.log('Navigation command executed');
+    } catch (error) {
+      console.error('Error during navigation:', error);
+    }
   };
 
   return (
