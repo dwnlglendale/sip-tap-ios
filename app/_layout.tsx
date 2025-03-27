@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
@@ -51,8 +52,10 @@ export default function RootLayout() {
   }
 
   return (
-    <PersonalizationProvider>
-      <Slot />
-    </PersonalizationProvider>
+    <SafeAreaProvider>
+      <PersonalizationProvider>
+        <Slot />
+      </PersonalizationProvider>
+    </SafeAreaProvider>
   );
 }

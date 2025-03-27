@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState } from 'react';
 
 export interface PersonalizationData {
   username?: string;
-  dailyWaterGoal?: number;
   nextReminder?: string;
   temperature?: number;
   // Hydration Goal Data
