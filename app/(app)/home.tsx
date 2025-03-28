@@ -9,6 +9,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CelebrationOverlay from '../components/CelebrationOverlay';
 import { getWeather, getWeatherIcon, WeatherData } from '../services/weatherService';
+import WaterProgress from '../components/WaterProgress';
 
 const QUICK_ADD_OPTIONS = [
   { amount: 250, label: '250ml' },
@@ -197,12 +198,12 @@ export default function HomeScreen() {
 
         {/* Progress Section */}
         <View style={styles.progressSection}>
-          <View style={styles.circularProgress}>
-            <Text style={styles.progressPercentage}>{Math.round(progressPercentage * 100)}%</Text>
-            <Text style={styles.progressLabel}>
-              {progress.currentIntake}ml / {dailyGoal}ml
-            </Text>
-          </View>
+          <WaterProgress
+            percentage={progressPercentage}
+            size={200}
+            currentAmount={progress.currentIntake}
+            goalAmount={dailyGoal}
+          />
           <Text style={[
             styles.aiMessage,
             { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
@@ -353,24 +354,6 @@ const styles = StyleSheet.create({
   progressSection: {
     alignItems: 'center',
     padding: 20,
-  },
-  circularProgress: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: colors.secondary.lightBlue,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  progressPercentage: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: colors.accent.purple,
-  },
-  progressLabel: {
-    fontSize: 16,
-    color: colors.neutral.darkGray,
   },
   aiMessage: {
     fontSize: 16,
