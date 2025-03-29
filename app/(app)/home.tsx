@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CelebrationOverlay from '../components/CelebrationOverlay';
 import { getWeather, getWeatherIcon, WeatherData } from '../services/weatherService';
 import WaterProgress from '../components/WaterProgress';
+import { calculateNextSip } from '../services/sipRecommendationService';
 
 const QUICK_ADD_OPTIONS = [
   { amount: 250, label: '250ml' },
@@ -39,6 +40,11 @@ export default function HomeScreen() {
   });
   const [showCelebration, setShowCelebration] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [sipRecommendation, setSipRecommendation] = useState<{
+    amount: number;
+    message: string;
+    urgency: 'low' | 'medium' | 'high';
+  } | null>(null);
 
   useEffect(() => {
     loadDailyProgress();
@@ -51,6 +57,15 @@ export default function HomeScreen() {
       loadDailyProgress();
     }, [])
   );
+
+  // Update sip recommendation when weather or progress changes
+  useEffect(() => {
+    const dailyGoal = data.dailyGoal;
+    if (dailyGoal !== null && data.activityLevel) {
+      const recommendation = calculateNextSip(weather, data, progress.currentIntake);
+      setSipRecommendation(recommendation);
+    }
+  }, [weather, progress.currentIntake, data.dailyGoal, data.activityLevel]);
 
   const loadDailyProgress = async () => {
     try {
@@ -86,43 +101,40 @@ export default function HomeScreen() {
 
   const handleQuickAdd = async (amount: number) => {
     if (amount === 0) {
-      // Navigate to custom log screen
       router.push('/(app)/custom-log');
       return;
     }
 
-    const newIntake = progress.currentIntake + amount;
-    const dailyGoal = data.dailyGoal || 2500;
-
-    // Check if goal is reached for the first time
-    const isGoalReached = newIntake >= dailyGoal;
-    const isFirstTimeExceeding = isGoalReached && progress.currentIntake < dailyGoal;
-    const today = new Date().toISOString().split('T')[0];
-
-    // Update streak if goal is reached
-    let newStreakDays = progress.streakDays;
-    if (isGoalReached && progress.lastGoalReached !== today) {
-      newStreakDays = progress.streakDays + 1;
-    }
-
-    const updatedProgress = {
-      date: today,
-      currentIntake: newIntake,
-      streakDays: newStreakDays,
-      lastGoalReached: isGoalReached ? today : progress.lastGoalReached,
-    };
-
     try {
-      await AsyncStorage.setItem('dailyProgress', JSON.stringify(updatedProgress));
-      setProgress({
+      const today = new Date().toISOString().split('T')[0];
+      const storedProgress = await AsyncStorage.getItem('dailyProgress');
+      const progressData = storedProgress ? JSON.parse(storedProgress) : {};
+      
+      const newIntake = (progressData.currentIntake || 0) + amount;
+      const dailyGoal = data.dailyGoal;
+      
+      // Check if goal is reached for the first time today
+      const isGoalReached = dailyGoal !== null && newIntake >= dailyGoal;
+      const isFirstTimeReachingGoal = isGoalReached && progressData.lastGoalReached !== today;
+
+      // Update streak if goal is reached for the first time today
+      let newStreakDays = progressData.streakDays || 0;
+      if (isFirstTimeReachingGoal) {
+        newStreakDays += 1;
+      }
+      
+      const updatedProgress = {
+        date: today,
         currentIntake: newIntake,
         streakDays: newStreakDays,
-        lastGoalReached: updatedProgress.lastGoalReached,
-      });
+        lastGoalReached: isGoalReached ? today : (progressData.lastGoalReached || ''),
+      };
+
+      await AsyncStorage.setItem('dailyProgress', JSON.stringify(updatedProgress));
+      setProgress(updatedProgress);
 
       // Show celebration if exceeding goal for the first time
-      if (isFirstTimeExceeding) {
-        console.log('Showing celebration for first time exceeding goal');
+      if (isFirstTimeReachingGoal) {
         setShowCelebration(true);
       }
     } catch (error) {
@@ -195,6 +207,49 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Weather Section */}
+        {weather && (
+          <View style={styles.weatherSection}>
+            <MaterialCommunityIcons 
+              name={getWeatherIcon(weather.condition, weather.isDay)} 
+              size={24} 
+              color={isDarkMode ? colors.neutral.white : colors.neutral.black} 
+            />
+            <Text style={[
+              styles.weatherText,
+              { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
+            ]}>{weather.temperature}°C</Text>
+          </View>
+        )}
+
+        {/* Sip Recommendation Section */}
+        {sipRecommendation && (
+          <View style={[
+            styles.recommendationSection,
+            { backgroundColor: isDarkMode ? colors.neutral.darkGray : colors.secondary.white }
+          ]}>
+            <View style={styles.recommendationHeader}>
+              <MaterialCommunityIcons 
+                name="water" 
+                size={24} 
+                color={colors.accent.purple} 
+              />
+              <Text style={[
+                styles.recommendationTitle,
+                { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
+              ]}>Recommended Sip</Text>
+            </View>
+            <Text style={[
+              styles.recommendationAmount,
+              { color: colors.accent.purple }
+            ]}>{sipRecommendation.amount}ml</Text>
+            <Text style={[
+              styles.recommendationMessage,
+              { color: isDarkMode ? colors.neutral.lightGray : colors.neutral.darkGray }
+            ]}>{sipRecommendation.message}</Text>
+          </View>
+        )}
 
         {/* Progress Section */}
         <View style={styles.progressSection}>
@@ -293,10 +348,12 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <CelebrationOverlay
-        visible={showCelebration}
-        onClose={() => setShowCelebration(false)}
-      />
+      {showCelebration && (
+        <CelebrationOverlay 
+          visible={showCelebration}
+          onClose={() => setShowCelebration(false)} 
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -351,6 +408,15 @@ const styles = StyleSheet.create({
     color: colors.accent.green,
     fontSize: 12,
   },
+  weatherSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  weatherText: {
+    marginLeft: 8,
+    fontSize: 16,
+  },
   progressSection: {
     alignItems: 'center',
     padding: 20,
@@ -404,10 +470,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  weatherText: {
-    marginLeft: 8,
-    fontSize: 16,
-  },
   bottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -426,5 +488,34 @@ const styles = StyleSheet.create({
   clearButton: {
     padding: 4,
     marginLeft: 8,
+  },
+  recommendationSection: {
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  recommendationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  recommendationTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  recommendationAmount: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  recommendationMessage: {
+    fontSize: 16,
+    lineHeight: 24,
   },
 }); 

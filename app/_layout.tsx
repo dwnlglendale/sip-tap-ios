@@ -9,7 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
   // TESTING FLAG: Set to true to force onboarding, false to use actual status
-  const FORCE_ONBOARDING = true;
+  const FORCE_ONBOARDING = false;
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(!FORCE_ONBOARDING);
   const segments = useSegments();
   const router = useRouter();
