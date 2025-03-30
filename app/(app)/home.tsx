@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { colors, getThemeColors } from '../theme/colors';
 import { useColorScheme } from 'react-native';
 import { usePersonalization } from '../contexts/PersonalizationContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -32,6 +32,7 @@ const ML_PER_TREE = 100000; // Plant one tree for every 100L of water (10 bottle
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
+  const theme = getThemeColors(isDarkMode);
   const { data } = usePersonalization();
   const [progress, setProgress] = useState<DailyProgress>({
     currentIntake: 0,
@@ -159,23 +160,21 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={[
-      styles.container,
-      { backgroundColor: isDarkMode ? colors.secondary.black : colors.secondary.white }
-    ]}>
-      <ScrollView style={styles.scrollView}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.userSection}>
             <View style={styles.userInfo}>
-              <Text style={[
-                styles.greeting,
-                { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-              ]}>Hi, {data.username || 'there'}</Text>
+              <Text style={[styles.greeting, { color: theme.text }]}>
+                Hi, {data.username || 'there'}
+              </Text>
               <View style={styles.streakContainer}>
-                <View style={styles.streakBadge}>
-                  <MaterialCommunityIcons name="fire" size={16} color={colors.accent.purple} />
-                  <Text style={styles.streakText}>{progress.streakDays} Day Streak!</Text>
+                <View style={[styles.streakBadge, { backgroundColor: theme.accent + '20' }]}>
+                  <MaterialCommunityIcons name="fire" size={16} color={theme.accent} />
+                  <Text style={[styles.streakText, { color: theme.accent }]}>
+                    {progress.streakDays} Day Streak!
+                  </Text>
                 </View>
                 {__DEV__ && (
                   <TouchableOpacity 
@@ -190,161 +189,137 @@ export default function HomeScreen() {
                       }
                     }}
                   >
-                    <MaterialCommunityIcons name="refresh" size={12} color={colors.neutral.lightGray} />
+                    <MaterialCommunityIcons name="refresh" size={12} color={theme.textDisabled} />
                   </TouchableOpacity>
                 )}
               </View>
             </View>
-            <TouchableOpacity style={styles.profileButton}>
-              <MaterialCommunityIcons name="account" size={24} color={colors.accent.purple} />
-            </TouchableOpacity>
           </View>
           
           <View style={styles.ecoImpact}>
-            <MaterialCommunityIcons name="leaf" size={16} color={colors.accent.green} />
-            <Text style={styles.ecoText}>
+            <MaterialCommunityIcons name="leaf" size={16} color={theme.accent} />
+            <Text style={[styles.ecoText, { color: theme.text }]}>
               {bottlesSaved} Bottles Saved | {treesPlanted} Trees Planted
             </Text>
           </View>
         </View>
 
-        {/* Weather Section */}
-        {weather && (
-          <View style={styles.weatherSection}>
-            <MaterialCommunityIcons 
-              name={getWeatherIcon(weather.condition, weather.isDay)} 
-              size={24} 
-              color={isDarkMode ? colors.neutral.white : colors.neutral.black} 
+        {/* Main Content */}
+        <View style={styles.mainContent}>
+          {/* Progress Section */}
+          <View style={styles.progressSection}>
+            <WaterProgress
+              percentage={progressPercentage}
+              size={200}
+              currentAmount={progress.currentIntake}
+              goalAmount={dailyGoal}
             />
-            <Text style={[
-              styles.weatherText,
-              { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-            ]}>{weather.temperature}°C</Text>
+            <Text style={[styles.aiMessage, { color: theme.text }]}>
+              {progressPercentage >= 1 
+                ? "Great job! You've reached your goal for today!" 
+                : "Keep going! You're doing great!"}
+            </Text>
           </View>
-        )}
 
-        {/* Sip Recommendation Section */}
-        {sipRecommendation && (
-          <View style={[
-            styles.recommendationSection,
-            { backgroundColor: isDarkMode ? colors.neutral.darkGray : colors.secondary.white }
-          ]}>
-            <View style={styles.recommendationHeader}>
-              <MaterialCommunityIcons 
-                name="water" 
-                size={24} 
-                color={colors.accent.purple} 
-              />
-              <Text style={[
-                styles.recommendationTitle,
-                { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-              ]}>Recommended Sip</Text>
+          {/* Weather and Recommendation Section */}
+          <View style={styles.infoSection}>
+            {weather && (
+              <View style={styles.weatherSection}>
+                <MaterialCommunityIcons 
+                  name={getWeatherIcon(weather.condition, weather.isDay)} 
+                  size={24} 
+                  color={theme.text} 
+                />
+                <Text style={[styles.weatherText, { color: theme.text }]}>
+                  {weather.temperature}°C - {getHydrationTip(weather.temperature)}
+                </Text>
+              </View>
+            )}
+
+            {sipRecommendation && (
+              <View style={styles.recommendationSection}>
+                <View style={styles.recommendationHeader}>
+                  <MaterialCommunityIcons 
+                    name="water" 
+                    size={24} 
+                    color={theme.primary} 
+                  />
+                  <Text style={[styles.recommendationTitle, { color: theme.text }]}>
+                    Recommended Sip
+                  </Text>
+                </View>
+                <Text style={[styles.recommendationAmount, { color: theme.primary }]}>
+                  {sipRecommendation.amount}ml
+                </Text>
+                <Text style={[styles.recommendationMessage, { color: theme.textSecondary }]}>
+                  {sipRecommendation.message}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Quick Add Section */}
+          <View style={styles.quickAddSection}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Add</Text>
+            <View style={styles.quickAddButtons}>
+              {QUICK_ADD_OPTIONS.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.quickAddButton,
+                    { backgroundColor: theme.accent + '20' }
+                  ]}
+                  onPress={() => handleQuickAdd(option.amount)}
+                >
+                  {option.icon ? (
+                    <MaterialCommunityIcons name={option.icon} size={24} color={theme.accent} />
+                  ) : (
+                    <Text style={[styles.quickAddAmount, { color: theme.accent }]}>
+                      {option.label}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ))}
             </View>
-            <Text style={[
-              styles.recommendationAmount,
-              { color: colors.accent.purple }
-            ]}>{sipRecommendation.amount}ml</Text>
-            <Text style={[
-              styles.recommendationMessage,
-              { color: isDarkMode ? colors.neutral.lightGray : colors.neutral.darkGray }
-            ]}>{sipRecommendation.message}</Text>
           </View>
-        )}
 
-        {/* Progress Section */}
-        <View style={styles.progressSection}>
-          <WaterProgress
-            percentage={progressPercentage}
-            size={200}
-            currentAmount={progress.currentIntake}
-            goalAmount={dailyGoal}
-          />
-          <Text style={[
-            styles.aiMessage,
-            { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-          ]}>
-            {progressPercentage >= 1 
-              ? "Great job! You've reached your goal for today!" 
-              : "Keep going! You're doing great!"}
-          </Text>
-        </View>
-
-        {/* Quick Add Section */}
-        <View style={styles.quickAddSection}>
-          <Text style={[
-            styles.sectionTitle,
-            { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-          ]}>Quick Add</Text>
-          <View style={styles.quickAddGrid}>
-            {QUICK_ADD_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option.amount}
-                style={[
-                  styles.quickAddButton,
-                  { backgroundColor: isDarkMode ? colors.neutral.darkGray : colors.secondary.lightBlue }
-                ]}
-                onPress={() => handleQuickAdd(option.amount)}
-              >
-                {option.icon ? (
-                  <MaterialCommunityIcons name={option.icon} size={24} color={colors.accent.purple} />
-                ) : (
-                  <Text style={styles.quickAddAmount}>{option.label}</Text>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Reminder Section */}
-        <View style={styles.reminderSection}>
-          <View style={[
-            styles.reminderCard,
-            { backgroundColor: isDarkMode ? colors.neutral.darkGray : colors.secondary.lightBlue }
-          ]}>
-            <View style={styles.reminderInfo}>
-              <MaterialCommunityIcons name="clock-outline" size={24} color={colors.accent.purple} />
-              <Text style={[
-                styles.reminderText,
-                { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-              ]}>Next sip in {data.nextReminder || '30 mins'}</Text>
-            </View>
-            <View style={styles.weatherInfo}>
-              <MaterialCommunityIcons 
-                name={weather ? getWeatherIcon(weather.condition, weather.isDay) as any : 'weather-partly-cloudy'} 
-                size={24} 
-                color={colors.accent.purple} 
-              />
-              <Text style={[
-                styles.weatherText,
-                { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-              ]}>
-                {weather ? `${weather.temperature}°C - ${getHydrationTip(weather.temperature)}` : 'Loading weather...'}
+          {/* Stats Section */}
+          <View style={styles.statsSection}>
+            <View style={styles.statCard}>
+              <MaterialCommunityIcons name="bottle-tonic" size={24} color={theme.accent} />
+              <Text style={[styles.statValue, { color: theme.text }]}>
+                {Math.round(progress.currentIntake / BOTTLE_SIZE)} bottles
               </Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Saved</Text>
+            </View>
+            <View style={styles.statCard}>
+              <MaterialCommunityIcons name="tree" size={24} color={theme.accent} />
+              <Text style={[styles.statValue, { color: theme.text }]}>
+                {Math.round(progress.currentIntake / ML_PER_TREE)} trees
+              </Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Planted</Text>
             </View>
           </View>
         </View>
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <View style={[
-        styles.bottomNav,
-        { backgroundColor: isDarkMode ? colors.neutral.darkGray : colors.secondary.white }
-      ]}>
+      <View style={[styles.bottomNav, { backgroundColor: theme.surface }]}>
         <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons name="home" size={24} color={colors.accent.purple} />
-          <Text style={styles.navLabel}>Home</Text>
+          <MaterialCommunityIcons name="home" size={24} color={theme.accent} />
+          <Text style={[styles.navLabel, { color: theme.text }]}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons name="chart-bar" size={24} color={colors.neutral.lightGray} />
-          <Text style={styles.navLabel}>Stats</Text>
+          <MaterialCommunityIcons name="chart-bar" size={24} color={theme.textDisabled} />
+          <Text style={[styles.navLabel, { color: theme.text }]}>Stats</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons name="bell-outline" size={24} color={colors.neutral.lightGray} />
-          <Text style={styles.navLabel}>Reminders</Text>
+          <MaterialCommunityIcons name="bell-outline" size={24} color={theme.textDisabled} />
+          <Text style={[styles.navLabel, { color: theme.text }]}>Reminders</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons name="cog-outline" size={24} color={colors.neutral.lightGray} />
-          <Text style={styles.navLabel}>Settings</Text>
+          <MaterialCommunityIcons name="cog-outline" size={24} color={theme.textDisabled} />
+          <Text style={[styles.navLabel, { color: theme.text }]}>Settings</Text>
         </TouchableOpacity>
       </View>
 
@@ -365,23 +340,23 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 20,
+  },
   header: {
     padding: 20,
-    paddingTop: 20, // Reduced from 60 since we're using SafeAreaView
+    paddingTop: 40,
   },
   userSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  userInfo: {
     flex: 1,
   },
+  userInfo: {
+    marginBottom: 8,
+  },
   greeting: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   streakContainer: {
     flexDirection: 'row',
@@ -390,85 +365,121 @@ const styles = StyleSheet.create({
   streakBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
   },
   streakText: {
     marginLeft: 4,
-    color: colors.accent.purple,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
   },
-  profileButton: {
-    padding: 8,
+  clearButton: {
+    padding: 4,
   },
   ecoImpact: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 8,
+    marginTop: 8,
   },
   ecoText: {
     marginLeft: 4,
-    color: colors.accent.green,
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '500',
   },
-  weatherSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  weatherText: {
-    marginLeft: 8,
-    fontSize: 16,
+  mainContent: {
+    padding: 20,
   },
   progressSection: {
     alignItems: 'center',
-    padding: 20,
+    marginBottom: 32,
   },
   aiMessage: {
     fontSize: 16,
     textAlign: 'center',
+    marginTop: 12,
   },
-  quickAddSection: {
-    padding: 20,
+  infoSection: {
+    gap: 24,
+    marginBottom: 32,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  quickAddGrid: {
+  weatherSection: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
   },
-  quickAddButton: {
-    width: '23%',
-    aspectRatio: 1,
-    borderRadius: 12,
-    justifyContent: 'center',
+  weatherText: {
+    marginLeft: 8,
+    fontSize: 16,
+    flex: 1,
+  },
+  recommendationSection: {
+    padding: 16,
+  },
+  recommendationHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
   },
-  quickAddAmount: {
-    color: colors.accent.purple,
-    fontWeight: '500',
-  },
-  reminderSection: {
-    padding: 20,
-  },
-  reminderCard: {
-    padding: 16,
-    borderRadius: 12,
-  },
-  reminderInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  reminderText: {
+  recommendationTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
     marginLeft: 8,
-    fontSize: 16,
   },
-  weatherInfo: {
+  recommendationAmount: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  recommendationMessage: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  quickAddSection: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  quickAddButtons: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  quickAddButton: {
+    width: '48%',
+    height: 80,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickAddAmount: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  statsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    padding: 16,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 8,
+  },
+  statLabel: {
+    fontSize: 14,
+    marginTop: 4,
   },
   bottomNav: {
     flexDirection: 'row',
@@ -483,39 +494,5 @@ const styles = StyleSheet.create({
   navLabel: {
     fontSize: 12,
     marginTop: 4,
-    color: colors.neutral.darkGray,
-  },
-  clearButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  recommendationSection: {
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  recommendationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  recommendationTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  recommendationAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  recommendationMessage: {
-    fontSize: 16,
-    lineHeight: 24,
   },
 }); 

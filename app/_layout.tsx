@@ -28,9 +28,13 @@ export default function RootLayout() {
       const inPersonalization = segments[0] === "(personalization)";
       const inApp = segments[0] === "(app)";
       
-      // Only redirect to onboarding if we're not in onboarding, personalization, or app
+      // Redirect to onboarding if not completed and not in onboarding/personalization/app
       if (!hasCompletedOnboarding && !inOnboarding && !inPersonalization && !inApp) {
         router.replace("/onboarding");
+      }
+      // Redirect to home if onboarding is completed and not in app
+      else if (hasCompletedOnboarding && !inApp) {
+        router.replace("/(app)/home");
       }
     }
   }, [hasCompletedOnboarding, segments, isLoading]);
