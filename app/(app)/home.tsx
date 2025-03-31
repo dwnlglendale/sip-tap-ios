@@ -284,22 +284,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Stats Section */}
-          <View style={styles.statsSection}>
-            <View style={styles.statCard}>
-              <MaterialCommunityIcons name="bottle-tonic" size={24} color={theme.accent} />
-              <Text style={[styles.statValue, { color: theme.text }]}>
-                {Math.round(progress.currentIntake / BOTTLE_SIZE)} bottles
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Saved</Text>
-            </View>
-            <View style={styles.statCard}>
-              <MaterialCommunityIcons name="tree" size={24} color={theme.accent} />
-              <Text style={[styles.statValue, { color: theme.text }]}>
-                {Math.round(progress.currentIntake / ML_PER_TREE)} trees
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Planted</Text>
-            </View>
-          </View>
+          
         </View>
       </ScrollView>
 
