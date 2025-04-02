@@ -74,13 +74,30 @@ export default function HomeScreen() {
       const storedProgress = await AsyncStorage.getItem('dailyProgress');
       const progressData = storedProgress ? JSON.parse(storedProgress) : {};
 
+      // Check if we need to reset the streak
+      if (progressData.lastGoalReached) {
+        const lastGoalDate = new Date(progressData.lastGoalReached);
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(0, 0, 0, 0);
+        
+        // If last goal was not yesterday, reset streak
+        if (lastGoalDate.getTime() < yesterday.getTime()) {
+          progressData.streakDays = 0;
+        }
+      }
+
       // Reset progress if it's a new day
       if (progressData.date !== today) {
-        setProgress({
+        // Save the reset progress to AsyncStorage
+        const resetProgress = {
+          date: today,
           currentIntake: 0,
           streakDays: progressData.streakDays || 0,
           lastGoalReached: progressData.lastGoalReached || '',
-        });
+        };
+        await AsyncStorage.setItem('dailyProgress', JSON.stringify(resetProgress));
+        setProgress(resetProgress);
       } else {
         setProgress({
           currentIntake: progressData.currentIntake || 0,
@@ -121,7 +138,18 @@ export default function HomeScreen() {
       // Update streak if goal is reached for the first time today
       let newStreakDays = progressData.streakDays || 0;
       if (isFirstTimeReachingGoal) {
-        newStreakDays += 1;
+        // Check if the last goal was reached yesterday
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        
+        if (progressData.lastGoalReached === yesterdayStr) {
+          // If last goal was yesterday, increment streak
+          newStreakDays = (progressData.streakDays || 0) + 1;
+        } else if (progressData.lastGoalReached !== today) {
+          // If last goal was not yesterday or today, reset streak to 1
+          newStreakDays = 1;
+        }
       }
       
       const updatedProgress = {
@@ -131,6 +159,7 @@ export default function HomeScreen() {
         lastGoalReached: isGoalReached ? today : (progressData.lastGoalReached || ''),
       };
 
+      console.log('Updated Progress:', updatedProgress); // Add logging
       await AsyncStorage.setItem('dailyProgress', JSON.stringify(updatedProgress));
       setProgress(updatedProgress);
 
