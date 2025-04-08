@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Dimensions } from 'react-native';
 import { Svg, Path, Circle, G, Defs, ClipPath } from 'react-native-svg';
-import { colors } from '../theme/colors';
+import { colors, getThemeColors } from '../theme/colors';
+import { useColorScheme } from 'react-native';
 
 interface WaterProgressProps {
   percentage: number;
@@ -11,6 +12,10 @@ interface WaterProgressProps {
 }
 
 export default function WaterProgress({ percentage, size, currentAmount, goalAmount }: WaterProgressProps) {
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  const theme = getThemeColors(isDarkMode);
+
   // Animation values
   const waveOffset = useRef(new Animated.Value(0)).current;
   const bubbleY1 = useRef(new Animated.Value(0)).current;
@@ -135,10 +140,10 @@ export default function WaterProgress({ percentage, size, currentAmount, goalAmo
 
       {/* Progress text */}
       <View style={[styles.textContainer, { width: size, height: size }]}>
-        <Animated.Text style={styles.percentage}>
+        <Animated.Text style={[styles.percentage, { color: isDarkMode ? theme.accent : '#2C3E50' }]}>
           {Math.round(percentage * 100)}%
         </Animated.Text>
-        <Animated.Text style={styles.amount}>
+        <Animated.Text style={[styles.amount, { color: isDarkMode ? theme.accent : '#34495E' }]}>
           {currentAmount}ml / {goalAmount}ml
         </Animated.Text>
       </View>
@@ -160,14 +165,12 @@ const styles = StyleSheet.create({
   percentage: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#2C3E50',
     textShadowColor: 'rgba(255, 255, 255, 0.8)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   amount: {
     fontSize: 16,
-    color: '#34495E',
     textShadowColor: 'rgba(255, 255, 255, 0.8)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 1,
