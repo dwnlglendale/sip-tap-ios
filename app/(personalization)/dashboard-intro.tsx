@@ -101,7 +101,9 @@ export default function DashboardIntro() {
         <Text style={[
           styles.title,
           { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-        ]}>Welcome to Your Dashboard</Text>
+        ]}>
+          {data.username ? `Welcome ${data.username}!` : 'Welcome!'}
+        </Text>
         <Text style={[
           styles.subtitle,
           { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }

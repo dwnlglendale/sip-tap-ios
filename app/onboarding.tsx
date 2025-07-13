@@ -71,8 +71,8 @@ export default function Onboarding() {
   const handleGetStarted = () => {
     // Save onboarding completion status
     AsyncStorage.setItem('hasCompletedOnboarding', 'true');
-    // Navigate to username screen
-    router.push('/(personalization)/username');
+    // Navigate directly to hydration goal (skip username since we have it from auth)
+    router.push('/(personalization)/hydration-goal');
   };
 
   return (

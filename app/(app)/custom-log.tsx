@@ -8,6 +8,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import CelebrationOverlay from '../components/CelebrationOverlay';
+import { useAuth } from '../contexts/AuthContext';
+import { supabaseService } from '../services/supabase';
 
 const { width } = Dimensions.get('window');
 
@@ -53,15 +55,20 @@ const RECOMMENDATIONS: Recommendation[] = [
   },
 ];
 
+const BOTTLE_SIZE = 500;
+
 export default function CustomLog() {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
   const { data, updateData } = usePersonalization();
+  const { user } = useAuth();
   const [amount, setAmount] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
   const [showRareAnimation, setShowRareAnimation] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [currentIntake, setCurrentIntake] = useState(0);
+  const [streakDays, setStreakDays] = useState(0);
 
   // Animation values
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -116,7 +123,6 @@ export default function CustomLog() {
     const numericAmount = parseInt(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) return;
 
-    // Save to AsyncStorage
     try {
       const today = new Date().toISOString().split('T')[0];
       const storedProgress = await AsyncStorage.getItem('dailyProgress');
@@ -129,7 +135,37 @@ export default function CustomLog() {
         lastGoalReached: progressData.lastGoalReached || '',
       };
 
+      setCurrentIntake(updatedProgress.currentIntake);
+      setStreakDays(updatedProgress.streakDays);
+
+      // Save to AsyncStorage for immediate UI updates
       await AsyncStorage.setItem('dailyProgress', JSON.stringify(updatedProgress));
+      await AsyncStorage.setItem(`dailyProgress_${today}`, JSON.stringify(updatedProgress));
+
+      // Save to database if user is authenticated
+      if (user) {
+        try {
+          // Log the water intake
+          await supabaseService.logWater(user.id, numericAmount);
+          
+          // Update daily progress in database
+          const dailyGoal = data.dailyGoal || 2500;
+          const isGoalReached = updatedProgress.currentIntake >= dailyGoal;
+          
+          await supabaseService.upsertDailyProgress({
+            user_id: user.id,
+            date: today,
+            current_intake: updatedProgress.currentIntake,
+            goal_reached: isGoalReached,
+            streak_days: updatedProgress.streakDays,
+          });
+          
+          console.log('Custom log data saved to database successfully');
+        } catch (dbError) {
+          console.error('Error saving custom log to database:', dbError);
+          // Continue with local storage if database fails
+        }
+      }
 
       // Check if user exceeded their daily goal for the first time
       const isFirstTimeExceeding = updatedProgress.currentIntake > data.dailyGoal && 
@@ -311,6 +347,9 @@ export default function CustomLog() {
       <CelebrationOverlay
         visible={showCelebration}
         onClose={() => setShowCelebration(false)}
+        username={data.username}
+        streakDays={streakDays}
+        bottlesSaved={Math.floor(currentIntake / BOTTLE_SIZE)}
       />
     </SafeAreaView>
   );

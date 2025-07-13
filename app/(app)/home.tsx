@@ -11,6 +11,8 @@ import CelebrationOverlay from '../components/CelebrationOverlay';
 import { getWeather, getWeatherIcon, WeatherData } from '../services/weatherService';
 import WaterProgress from '../components/WaterProgress';
 import { calculateNextSip } from '../services/sipRecommendationService';
+import { useAuth } from '../contexts/AuthContext';
+import { supabaseService } from '../services/supabase';
 
 const QUICK_ADD_OPTIONS = [
   { amount: 250, label: '250ml' },
@@ -23,6 +25,7 @@ interface DailyProgress {
   currentIntake: number;
   streakDays: number;
   lastGoalReached: string;
+  bottlesSaved?: number;
 }
 
 // Constants for environmental impact calculations
@@ -34,6 +37,7 @@ export default function HomeScreen() {
   const isDarkMode = colorScheme === 'dark';
   const theme = getThemeColors(isDarkMode);
   const { data } = usePersonalization();
+  const { user } = useAuth();
   const [progress, setProgress] = useState<DailyProgress>({
     currentIntake: 0,
     streakDays: 0,
@@ -46,6 +50,8 @@ export default function HomeScreen() {
     message: string;
     urgency: 'low' | 'medium' | 'high';
   } | null>(null);
+  const [selectedBottleType, setSelectedBottleType] = useState<'reusable' | 'plastic'>('reusable');
+  const [bottlesSaved, setBottlesSaved] = useState(0);
 
   useEffect(() => {
     loadDailyProgress();
@@ -62,9 +68,15 @@ export default function HomeScreen() {
   // Update sip recommendation when weather or progress changes
   useEffect(() => {
     const dailyGoal = data.dailyGoal;
-    if (dailyGoal !== null && data.activityLevel) {
+    const currentProgressPercentage = dailyGoal ? progress.currentIntake / dailyGoal : 0;
+    
+    // Only show recommendation if goal hasn't been reached yet
+    if (dailyGoal !== null && data.activityLevel && currentProgressPercentage < 1) {
       const recommendation = calculateNextSip(weather, data, progress.currentIntake);
       setSipRecommendation(recommendation);
+    } else {
+      // Clear recommendation when goal is reached
+      setSipRecommendation(null);
     }
   }, [weather, progress.currentIntake, data.dailyGoal, data.activityLevel]);
 
@@ -104,6 +116,7 @@ export default function HomeScreen() {
           streakDays: progressData.streakDays || 0,
           lastGoalReached: progressData.lastGoalReached || '',
         });
+        setBottlesSaved(progressData.bottlesSaved || 0);
       }
     } catch (error) {
       console.error('Error loading daily progress:', error);
@@ -117,7 +130,7 @@ export default function HomeScreen() {
     }
   };
 
-  const handleQuickAdd = async (amount: number) => {
+  const handleQuickAdd = async (amount: number, bottleType: 'reusable' | 'plastic' = selectedBottleType) => {
     if (amount === 0) {
       router.push('/(app)/custom-log');
       return;
@@ -151,17 +164,51 @@ export default function HomeScreen() {
           newStreakDays = 1;
         }
       }
+
+      // Calculate bottles saved only if using reusable bottle
+      let newBottlesSaved = progressData.bottlesSaved || 0;
+      if (bottleType === 'reusable') {
+        newBottlesSaved += Math.floor(amount / BOTTLE_SIZE);
+      }
       
       const updatedProgress = {
         date: today,
         currentIntake: newIntake,
         streakDays: newStreakDays,
         lastGoalReached: isGoalReached ? today : (progressData.lastGoalReached || ''),
+        bottlesSaved: newBottlesSaved,
       };
 
-      console.log('Updated Progress:', updatedProgress); // Add logging
+      console.log('Updated Progress:', updatedProgress);
+
+      // Save to AsyncStorage for immediate UI updates
       await AsyncStorage.setItem('dailyProgress', JSON.stringify(updatedProgress));
+      await AsyncStorage.setItem(`dailyProgress_${today}`, JSON.stringify(updatedProgress));
+      
+      // Save to database if user is authenticated
+      if (user) {
+        try {
+          // Log the water intake
+          await supabaseService.logWater(user.id, amount);
+          
+          // Update daily progress in database
+          await supabaseService.upsertDailyProgress({
+            user_id: user.id,
+            date: today,
+            current_intake: newIntake,
+            goal_reached: isGoalReached,
+            streak_days: newStreakDays,
+          });
+          
+          console.log('Data saved to database successfully');
+        } catch (dbError) {
+          console.error('Error saving to database:', dbError);
+          // Continue with local storage if database fails
+        }
+      }
+      
       setProgress(updatedProgress);
+      setBottlesSaved(newBottlesSaved);
 
       // Show celebration if exceeding goal for the first time
       if (isFirstTimeReachingGoal) {
@@ -175,9 +222,8 @@ export default function HomeScreen() {
   const dailyGoal = data.dailyGoal || 2500;
   const progressPercentage = Math.min(progress.currentIntake / dailyGoal, 1);
 
-  // In the component
-  const bottlesSaved = Math.floor(progress.currentIntake / BOTTLE_SIZE);
-  const treesPlanted = Math.floor(progress.currentIntake / ML_PER_TREE);
+  // Calculate trees planted based on bottles saved
+  const treesPlanted = Math.floor(bottlesSaved * BOTTLE_SIZE / ML_PER_TREE);
 
   // Get hydration recommendation based on temperature
   const getHydrationTip = (temp?: number): string => {
@@ -265,7 +311,7 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {sipRecommendation && (
+            {sipRecommendation && progressPercentage < 1 && (
               <View style={styles.recommendationSection}>
                 <View style={styles.recommendationHeader}>
                   <MaterialCommunityIcons 
@@ -285,30 +331,140 @@ export default function HomeScreen() {
                 </Text>
               </View>
             )}
+
+            {progressPercentage >= 1 && (
+              <View style={styles.goalReachedSection}>
+                <View style={styles.goalReachedHeader}>
+                  <MaterialCommunityIcons 
+                    name="trophy" 
+                    size={24} 
+                    color={colors.accent.green} 
+                  />
+                  <Text style={[styles.goalReachedTitle, { color: theme.text }]}>
+                    Goal Achieved! 🎉
+                  </Text>
+                </View>
+                <Text style={[styles.goalReachedMessage, { color: theme.textSecondary }]}>
+                  You've reached your daily hydration goal! Keep up the great work and stay hydrated throughout the day.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Quick Add Section */}
           <View style={styles.quickAddSection}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Add</Text>
-            <View style={styles.quickAddButtons}>
-              {QUICK_ADD_OPTIONS.map((option, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.quickAddButton,
-                    { backgroundColor: theme.accent + '20' }
-                  ]}
-                  onPress={() => handleQuickAdd(option.amount)}
-                >
-                  {option.icon ? (
-                    <MaterialCommunityIcons name={option.icon} size={24} color={theme.accent} />
-                  ) : (
-                    <Text style={[styles.quickAddAmount, { color: theme.accent }]}>
-                      {option.label}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              ))}
+            
+            {/* Bottle Type Tabs */}
+            <View style={styles.bottleTypeTabs}>
+              <TouchableOpacity
+                style={styles.bottleTypeTab}
+                onPress={() => setSelectedBottleType('reusable')}
+              >
+                <MaterialCommunityIcons 
+                  name="recycle" 
+                  size={20} 
+                  color={selectedBottleType === 'reusable' ? theme.accent : theme.textSecondary} 
+                />
+                <Text style={[
+                  styles.bottleTypeLabel,
+                  { 
+                    color: selectedBottleType === 'reusable' ? theme.accent : theme.textSecondary,
+                    fontWeight: selectedBottleType === 'reusable' ? 'bold' : 'normal',
+                  }
+                ]}>
+                  Reusable
+                </Text>
+                {selectedBottleType === 'reusable' && (
+                  <View style={[styles.tabIndicator, { backgroundColor: theme.accent }]} />
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.bottleTypeTab}
+                onPress={() => setSelectedBottleType('plastic')}
+              >
+                <MaterialCommunityIcons 
+                  name="bottle-soda" 
+                  size={20} 
+                  color={selectedBottleType === 'plastic' ? theme.accent : theme.textSecondary} 
+                />
+                <Text style={[
+                  styles.bottleTypeLabel,
+                  { 
+                    color: selectedBottleType === 'plastic' ? theme.accent : theme.textSecondary,
+                    fontWeight: selectedBottleType === 'plastic' ? 'bold' : 'normal',
+                  }
+                ]}>
+                  Plastic
+                </Text>
+                {selectedBottleType === 'plastic' && (
+                  <View style={[styles.tabIndicator, { backgroundColor: theme.accent }]} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick Add Buttons */}
+            <View style={[
+              styles.quickAddContainer,
+              { 
+                borderColor: selectedBottleType === 'reusable' ? colors.accent.green : theme.accent,
+                backgroundColor: selectedBottleType === 'reusable' ? colors.accent.green + '05' : theme.accent + '05'
+              }
+            ]}>
+              <View style={styles.quickAddHeader}>
+                <MaterialCommunityIcons 
+                  name={selectedBottleType === 'reusable' ? 'recycle' : 'bottle-soda'} 
+                  size={16} 
+                  color={selectedBottleType === 'reusable' ? colors.accent.green : theme.accent} 
+                />
+                <Text style={[
+                  styles.quickAddHeaderText,
+                  { color: selectedBottleType === 'reusable' ? colors.accent.green : theme.accent }
+                ]}>
+                  {selectedBottleType === 'reusable' ? 'Reusable Bottle' : 'Plastic Bottle'} Options
+                </Text>
+              </View>
+              <View style={styles.quickAddButtons}>
+                {QUICK_ADD_OPTIONS.map((option, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.quickAddButton,
+                      { 
+                        backgroundColor: selectedBottleType === 'reusable' 
+                          ? colors.accent.green + '20' 
+                          : theme.accent + '20' 
+                      }
+                    ]}
+                    onPress={() => handleQuickAdd(option.amount, selectedBottleType)}
+                  >
+                    {option.icon ? (
+                      <MaterialCommunityIcons 
+                        name={option.icon} 
+                        size={24} 
+                        color={selectedBottleType === 'reusable' ? colors.accent.green : theme.accent} 
+                      />
+                    ) : (
+                      <Text style={[
+                        styles.quickAddAmount, 
+                        { color: selectedBottleType === 'reusable' ? colors.accent.green : theme.accent }
+                      ]}>
+                        {option.label}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Bottle Type Info */}
+            <View style={styles.bottleTypeInfo}>
+              <Text style={[styles.bottleTypeInfoText, { color: theme.textSecondary }]}>
+                {selectedBottleType === 'reusable' 
+                  ? '🌱 Using reusable bottles helps save plastic and the environment!'
+                  : '💧 Every drop counts towards your hydration goal!'}
+              </Text>
             </View>
           </View>
 
@@ -323,7 +479,10 @@ export default function HomeScreen() {
           <MaterialCommunityIcons name="home" size={24} color={theme.accent} />
           <Text style={[styles.navLabel, { color: theme.text }]}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => router.push('/(app)/stats')}
+        >
           <MaterialCommunityIcons name="chart-bar" size={24} color={theme.textDisabled} />
           <Text style={[styles.navLabel, { color: theme.text }]}>Stats</Text>
         </TouchableOpacity>
@@ -340,7 +499,10 @@ export default function HomeScreen() {
       {showCelebration && (
         <CelebrationOverlay 
           visible={showCelebration}
-          onClose={() => setShowCelebration(false)} 
+          onClose={() => setShowCelebration(false)}
+          username={data.username}
+          streakDays={progress.streakDays}
+          bottlesSaved={bottlesSaved}
         />
       )}
     </SafeAreaView>
@@ -451,8 +613,80 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
   },
+  goalReachedSection: {
+    padding: 16,
+    backgroundColor: colors.accent.green + '10',
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.accent.green,
+  },
+  goalReachedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  goalReachedTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  goalReachedMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
   quickAddSection: {
     marginBottom: 32,
+  },
+  quickAddContainer: {
+    borderWidth: 2,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+  },
+  quickAddHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  quickAddHeaderText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bottleTypeTabs: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 24,
+  },
+  bottleTypeTab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    position: 'relative',
+  },
+  bottleTypeLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: '25%',
+    right: '25%',
+    height: 3,
+    borderRadius: 2,
+  },
+  bottleTypeInfo: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: colors.neutral.lightGray + '20',
+    borderRadius: 8,
+  },
+  bottleTypeInfoText: {
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 16,
   },
   sectionTitle: {
     fontSize: 24,

@@ -101,7 +101,9 @@ export default function Preferences() {
         <Text style={[
           styles.subtitle,
           { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }
-        ]}>Choose how you want to receive hydration reminders</Text>
+        ]}>
+          {data.username ? `${data.username}, choose how you want to receive hydration reminders` : 'Choose how you want to receive hydration reminders'}
+        </Text>
       </View>
 
       <View style={styles.optionsSection}>

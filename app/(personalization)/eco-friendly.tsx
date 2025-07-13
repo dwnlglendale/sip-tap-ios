@@ -106,7 +106,9 @@ export default function EcoFriendly() {
         <Text style={[
           styles.title,
           { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-        ]}>Eco-Friendly Hydration</Text>
+        ]}>
+          {data.username ? `Eco-Friendly Hydration, ${data.username}` : 'Eco-Friendly Hydration'}
+        </Text>
         <Text style={[
           styles.subtitle,
           { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }

@@ -118,7 +118,15 @@ app/
    ```bash
    npm install
    ```
-3. Start the development server:
+3. Set up environment variables:
+   Create a `.env` file in the project root with your Supabase credentials:
+   ```bash
+   EXPO_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+   ```
+   
+   You can find these values in your Supabase project dashboard under Settings > API.
+4. Start the development server:
    ```bash
    npx expo start
    ```
@@ -130,6 +138,20 @@ To test the onboarding flow:
 2. Restart the app
 3. Complete the onboarding process
 4. Set `FORCE_ONBOARDING = false` to test with saved preferences
+
+## Troubleshooting
+
+### Session Timeout Error
+If you see "Session check timeout" errors in the console:
+
+1. **Check Environment Variables**: Ensure your `.env` file is properly configured with valid Supabase credentials
+2. **Restart Development Server**: After setting up environment variables, restart your development server
+3. **Clear App Cache**: If using Expo Go, try clearing the app cache or reinstalling the app
+4. **Check Supabase Status**: Verify your Supabase project is active and accessible
+
+### Authentication Issues
+- See `AUTH_TROUBLESHOOTING.md` for detailed authentication troubleshooting
+- Use the debug overlay (top-right corner in development) to clear sessions manually
 
 ## Next Steps
 - Implement custom water intake input

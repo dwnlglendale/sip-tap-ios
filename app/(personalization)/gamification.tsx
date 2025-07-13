@@ -4,11 +4,12 @@ import { colors } from '../theme/colors';
 import { router } from 'expo-router';
 import { useColorScheme } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { usePersonalization } from '../contexts/PersonalizationContext';
 
 interface StreakLevel {
   name: string;
   days: number;
-  icon: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
   emoji: string;
   color: string;
 }
@@ -45,6 +46,7 @@ const STREAK_LEVELS: StreakLevel[] = [
 ];
 
 export default function Gamification() {
+  const { data } = usePersonalization();
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
   
@@ -92,7 +94,9 @@ export default function Gamification() {
         <Text style={[
           styles.title,
           { color: isDarkMode ? colors.neutral.white : colors.neutral.black }
-        ]}>Track Your Progress</Text>
+        ]}>
+          {data.username ? `Track Your Progress, ${data.username}` : 'Track Your Progress'}
+        </Text>
         <Text style={[
           styles.subtitle,
           { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }

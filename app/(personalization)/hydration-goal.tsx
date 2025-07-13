@@ -136,7 +136,9 @@ export default function HydrationGoal() {
           <Text style={[
             styles.subtitle,
             { color: isDarkMode ? colors.neutral.white : colors.neutral.darkGray }
-          ]}>Let's personalize your daily water intake</Text>
+          ]}>
+            {data.username ? `Hi ${data.username}! Let's personalize your daily water intake` : 'Let\'s personalize your daily water intake'}
+          </Text>
         </View>
 
         <View style={styles.inputSection}>
